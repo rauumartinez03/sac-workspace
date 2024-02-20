@@ -21,12 +21,19 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef enum {
+	S0,
+	S1,
+	S2,
+	S3
+} State;
 
+typedef State (*StateFunc)(void);
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -36,7 +43,7 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+#define ITM_Port32(n)	(*((volatile unsigned long *)(0xE0000000+4*n)))
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -49,9 +56,8 @@ RTC_HandleTypeDef hrtc;
 PCD_HandleTypeDef hpcd_USB_FS;
 
 /* USER CODE BEGIN PV */
-uint8_t led = 0;
-uint8_t d4 = 0;
-uint8_t d4bef = 0;
+State currState = S0;
+State lastState = S3;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,7 +70,17 @@ static void MX_RTC_Init(void);
 static void MX_UCPD1_Init(void);
 static void MX_USB_PCD_Init(void);
 /* USER CODE BEGIN PFP */
+State S0_func(void);
+State S1_func(void);
+State S2_func(void);
+State S3_func(void);
 
+StateFunc stateFunctions[4] = {
+		S0_func,
+		S1_func,
+		S2_func,
+		S3_func
+};
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -95,7 +111,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  ITM_Port32(31) = 1;
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -114,27 +130,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(led == 1){ //If USER button is pressed
-		  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7); //LED keeps flashing
-		  HAL_Delay(500); //0,5s = 2Hz
-		  if(d4 != d4bef){ //If D4 BUTTON changed its' state
-			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0); //Turns off the LED
-			  led = 0;	//Changes LED State
-			  d4bef = d4; //Updates last D4 state
-		  }
-	  } else { //If USER button is pressed again
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0); //Turns off the LED
-		  if(d4 != d4bef){ //If D4 BUTTON changed its' state
-			  for(int i = 0; i < 3; i++){ //LED flashes 3 times before
-				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
-				  HAL_Delay(200);
-				  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
-				  HAL_Delay(200);
-			  }
-			  d4bef = d4; //Updates last D4 state
-		  }
-	  }
-
+	  HAL_Delay(100); //For sync
+	  lastState = stateFunctions[currState](); //calls the current state function
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -546,16 +543,65 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
-	/* Toggle Flags used in main loop */
-  if (GPIO_Pin == USER_BUTTON_Pin)
+	/* Change currentState used in main loop */
+  if (GPIO_Pin == USER_BUTTON_Pin) //B1
   {
-
-    led = led == 0? 1: 0;
+	  currState = (currState + 1)%4;
   }
 
-  if (GPIO_Pin == D4_BUTTON_Pin){
-	  d4 = d4 == 0? 1: 0;
+  if (GPIO_Pin == D4_BUTTON_Pin) //B0
+  {
+	  currState = currState == 0? 3: currState - 1;
   }
+}
+
+int _write(int file, char *ptr, int len){
+	int DataIdx;
+
+	for(DataIdx=0; DataIdx<len; DataIdx++){
+		ITM_SendChar(*ptr++);
+	}
+	return len;
+}
+
+State S0_func(){
+	if(currState != lastState){
+		printf("Estado actual: S0\n\r");
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+
+	}
+	return currState;
+}
+
+State S1_func(){
+	if(currState != lastState){
+		printf("Estado actual: S1\n\r");
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+
+	}
+	return currState;
+}
+
+State S2_func(){
+	if(currState != lastState){
+		printf("Estado actual: S2\n\r");
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 1);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 1);
+
+	}
+	return currState;
+}
+
+State S3_func(){
+	if(currState != lastState){
+		printf("Estado actual: S3\n\r");
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, 0);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, 0);
+
+	}
+	return currState;
 }
 /* USER CODE END 4 */
 
