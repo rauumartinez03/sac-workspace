@@ -541,6 +541,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+//Se podrían usar más comentarios para dejar claro lo que se hace en cada momento y entender el uso de "%4" o "int _write"
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
 	/* Change currentState used in main loop */
