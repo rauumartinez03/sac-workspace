@@ -62,3 +62,4 @@ dkms.conf
 Debug
 
 GPIO_EXTI/
+ADC_SingleConversion_TriggerTimer_DMA/
