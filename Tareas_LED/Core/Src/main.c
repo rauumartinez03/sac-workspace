@@ -44,6 +44,7 @@ typedef State (*StateFunc)(void);
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
 #define ITM_Port32(n)	(*((volatile unsigned long *)(0xE0000000+4*n)))
+#define ADC_CONVERTED_DATA_BUFFER_SIZE 64
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -61,6 +62,9 @@ PCD_HandleTypeDef hpcd_USB_FS;
 /* USER CODE BEGIN PV */
 State currState = S0;
 State lastState = S3;
+
+/* Variables for ADC conversion data */
+uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data (array of data) */
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -135,6 +139,24 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  /*## Enable Timer ########################################################*/
+  if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
+  {
+    /* Counter enable error */
+    Error_Handler();
+  }
+
+  /*## Start ADC conversions ###############################################*/
+  /* Start ADC group regular conversion with DMA */
+  if (HAL_ADC_Start_DMA(&hadc1,
+                        (uint32_t *)aADCxConvertedData,
+                        ADC_CONVERTED_DATA_BUFFER_SIZE
+                       ) != HAL_OK)
+  {
+    /* ADC conversion start error */
+    Error_Handler();
+  }
+
   while (1)
   {
 	  HAL_Delay(100); //For sync
