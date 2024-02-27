@@ -38,7 +38,7 @@
 /*#define HAL_COMP_MODULE_ENABLED   */
 /*#define HAL_CRC_MODULE_ENABLED   */
 /*#define HAL_CRYP_MODULE_ENABLED   */
-/*#define HAL_DAC_MODULE_ENABLED   */
+#define HAL_DAC_MODULE_ENABLED
 /*#define HAL_DFSDM_MODULE_ENABLED   */
 /*#define HAL_FDCAN_MODULE_ENABLED   */
 /*#define HAL_GTZC_MODULE_ENABLED   */
