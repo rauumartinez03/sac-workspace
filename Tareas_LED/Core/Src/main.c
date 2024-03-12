@@ -45,6 +45,9 @@ typedef State (*StateFunc)(void);
 /* USER CODE BEGIN PM */
 #define ITM_Port32(n)	(*((volatile unsigned long *)(0xE0000000+4*n)))
 #define ADC_CONVERTED_DATA_BUFFER_SIZE 64
+#define DIGITAL_SCALE_12BITS ((uint32_t) 0xFFF)
+#define DAC_CONVERTED_DATA_BUFFER_SIZE 128
+#define PI 3.14159265358979323846
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -164,6 +167,29 @@ int main(void)
     /* ADC conversion start error */
     Error_Handler();
   }
+
+  /*## Enable Timer 4 ########################################################*/
+    if (HAL_TIM_Base_Start(&htim4) != HAL_OK)
+    {
+      /* Counter enable error */
+      Error_Handler();
+    }
+
+
+  //#########START DAC##########
+
+  if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DIGITAL_SCALE_12BITS) != HAL_OK)
+    {
+      /* Setting value Error */
+      Error_Handler();
+    }
+
+    /* Enable DAC Channel: channel corresponding to ADC channel ADC_CHANNEL_9 */
+    if (HAL_DAC_Start(&hdac1, DAC_CHANNEL_1) != HAL_OK)
+    {
+      /* Start Error */
+      Error_Handler();
+    }
 
   while (1)
   {
@@ -333,7 +359,7 @@ static void MX_DAC1_Init(void)
   */
   sConfig.DAC_SampleAndHold = DAC_SAMPLEANDHOLD_DISABLE;
   sConfig.DAC_Trigger = DAC_TRIGGER_T4_TRGO;
-  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_ABOVE_80MHZ;
+  sConfig.DAC_HighFrequency = DAC_HIGH_FREQUENCY_INTERFACE_MODE_DISABLE;
   sConfig.DAC_OutputBuffer = DAC_OUTPUTBUFFER_ENABLE;
   sConfig.DAC_ConnectOnChipPeripheral = DAC_CHIPCONNECT_DISABLE;
   sConfig.DAC_UserTrimming = DAC_TRIMMING_FACTORY;
