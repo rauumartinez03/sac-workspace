@@ -72,6 +72,23 @@ State lastState = S3;
 
 /* Variables for ADC conversion data */
 uint16_t aADCxConvertedData[ADC_CONVERTED_DATA_BUFFER_SIZE]; /* ADC group regular conversion data (array of data) */
+
+uint16_t Wave_LUT[DAC_CONVERTED_DATA_BUFFER_SIZE] = {
+    2048, 2149, 2250, 2350, 2450, 2549, 2646, 2742, 2837, 2929, 3020, 3108, 3193, 3275, 3355,
+    3431, 3504, 3574, 3639, 3701, 3759, 3812, 3861, 3906, 3946, 3982, 4013, 4039, 4060, 4076,
+    4087, 4094, 4095, 4091, 4082, 4069, 4050, 4026, 3998, 3965, 3927, 3884, 3837, 3786, 3730,
+    3671, 3607, 3539, 3468, 3394, 3316, 3235, 3151, 3064, 2975, 2883, 2790, 2695, 2598, 2500,
+    2400, 2300, 2199, 2098, 1997, 1896, 1795, 1695, 1595, 1497, 1400, 1305, 1212, 1120, 1031,
+    944, 860, 779, 701, 627, 556, 488, 424, 365, 309, 258, 211, 168, 130, 97,
+    69, 45, 26, 13, 4, 0, 1, 8, 19, 35, 56, 82, 113, 149, 189,
+    234, 283, 336, 394, 456, 521, 591, 664, 740, 820, 902, 987, 1075, 1166, 1258,
+    1353, 1449, 1546, 1645, 1745, 1845, 1946, 2047
+};
+
+uint16_t LUT_Cuadrado[5];
+uint16_t LUT1k[50];
+uint16_t LUT10k[5];
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -99,6 +116,10 @@ StateFunc stateFunctions[4] = {
 		S2_func,
 		S3_func
 };
+
+void DAC_func(void);
+void Gen_LUT_Cuadrado(void);
+void Gen_LUT_Senoidal(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -145,28 +166,36 @@ int main(void)
   MX_DAC1_Init();
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
+//  void DAC_func(void);
+//  void Gen_LUT_Cuadrado(void);
+  void Gen_LUT_Senoidal(void);
+  int j = 0;
+  for(int i = 0; i < 50; i = i + 10) {
+	LUT10k[j] = LUT1k[i];
+	j++;
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  /*## Enable Timer ########################################################*/
-  if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
-  {
-    /* Counter enable error */
-    Error_Handler();
-  }
-
-  /*## Start ADC conversions ###############################################*/
-  /* Start ADC group regular conversion with DMA */
-  if (HAL_ADC_Start_DMA(&hadc1,
-                        (uint32_t *)aADCxConvertedData,
-                        ADC_CONVERTED_DATA_BUFFER_SIZE
-                       ) != HAL_OK)
-  {
-    /* ADC conversion start error */
-    Error_Handler();
-  }
+//  /*## Enable Timer ########################################################*/
+//  if (HAL_TIM_Base_Start(&htim2) != HAL_OK)
+//  {
+//    /* Counter enable error */
+//    Error_Handler();
+//  }
+//
+//  /*## Start ADC conversions ###############################################*/
+//  /* Start ADC group regular conversion with DMA */
+//  if (HAL_ADC_Start_DMA(&hadc1,
+//                        (uint32_t *)aADCxConvertedData,
+//                        ADC_CONVERTED_DATA_BUFFER_SIZE
+//                       ) != HAL_OK)
+//  {
+//    /* ADC conversion start error */
+//    Error_Handler();
+//  }
 
   /*## Enable Timer 4 ########################################################*/
     if (HAL_TIM_Base_Start(&htim4) != HAL_OK)
@@ -177,24 +206,18 @@ int main(void)
 
 
   //#########START DAC##########
-
-  if (HAL_DAC_SetValue(&hdac1, DAC_CHANNEL_1, DAC_ALIGN_12B_R, DIGITAL_SCALE_12BITS) != HAL_OK)
-    {
-      /* Setting value Error */
-      Error_Handler();
-    }
-
-    /* Enable DAC Channel: channel corresponding to ADC channel ADC_CHANNEL_9 */
-    if (HAL_DAC_Start(&hdac1, DAC_CHANNEL_1) != HAL_OK)
-    {
-      /* Start Error */
-      Error_Handler();
-    }
+    //if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT_Cuadrado, 5, DAC_ALIGN_12B_R) != HAL_OK)
+    //if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT1k, 50, DAC_ALIGN_12B_R) != HAL_OK)
+    if (HAL_DAC_Start_DMA(&hdac1, DAC_CHANNEL_1, (uint32_t *)LUT10k, 5, DAC_ALIGN_12B_R) != HAL_OK)
+       	     {
+       	       /* Start Error */
+       	       Error_Handler();
+       	     }
 
   while (1)
   {
-	  HAL_Delay(100); //For sync
-	  lastState = stateFunctions[currState](); //calls the current state function
+	  HAL_Delay(1000); //For sync
+//	  lastState = stateFunctions[currState](); //calls the current state function
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -821,6 +844,36 @@ State S3_func(){
 	}
 	return currState;
 }
+
+//FUNCIONES DAC
+
+void DAC_func(void) {
+	for(int i = 0; i < 128; i++){
+		Wave_LUT[i] = DIGITAL_SCALE_12BITS;
+	}
+}
+
+void Gen_LUT_Cuadrado(void) {
+	for(int i = 0; i < 5; i++)
+	{
+		if(i < 2){
+			LUT_Cuadrado[i] = 0;
+		}
+		else {
+			LUT_Cuadrado[i] = 1830;
+			//Medida aproximada
+		}
+
+	}
+}
+
+void Gen_LUT_Senoidal(void) {
+	for(int i = 0; i < 50; i++)
+	{
+		LUT1k[i] = 950 + (int)(950 * sin(2 * PI * i / 50));
+	}
+}
+
 /* USER CODE END 4 */
 
 /**
